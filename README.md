@@ -34,6 +34,14 @@ npm run build
 npm run dev
 ```
 
+## Customizing the name
+
+The command ships with a personal suffix so it is easy to find in Raycast. To rename it for your own use:
+
+1. In `package.json`, change the command `name` (the folder-level `title` is only the display name) to your preferred identifier, e.g. `capture-webpage-as-md-for-you` and the two `title` fields accordingly.
+2. Rename `src/capture-webpage-as-md-for-lzengan.ts` to match the new command `name`.
+3. Update the `raycast-env.d.ts` type names and comments, or run `npm run build` once to regenerate it from the manifest.
+
 ## License
 
 MIT

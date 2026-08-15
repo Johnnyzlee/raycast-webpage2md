@@ -1,0 +1,50 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "wechat-article-capture",
+  "title": "Capture webpage as .md for lzengan",
+  "description": "Capture the active webpage as Markdown with local images and copy the file to the clipboard.",
+  "icon": "icon.png",
+  "author": "li_zeng",
+  "license": "MIT",
+  "categories": [
+    "Productivity",
+    "Web"
+  ],
+  "commands": [
+    {
+      "name": "capture-webpage-as-md-for-lzengan",
+      "title": "Capture webpage as .md for lzengan",
+      "subtitle": "Markdown with Local Images",
+      "description": "Save the active webpage as Markdown and copy the file to the clipboard",
+      "mode": "no-view"
+    }
+  ],
+  "dependencies": {
+    "@mozilla/readability": "^0.6.0",
+    "@raycast/api": "^1.104.24",
+    "linkedom": "^0.18.13",
+    "turndown": "^7.2.4",
+    "turndown-plugin-gfm": "^1.0.2"
+  },
+  "devDependencies": {
+    "@raycast/eslint-config": "^2.2.0",
+    "@types/node": "^24.3.0",
+    "@types/react": "^19.1.10",
+    "@types/turndown": "^5.0.6",
+    "eslint": "^9.34.0",
+    "prettier": "^3.6.2",
+    "typescript": "^5.9.2"
+  },
+  "overrides": {
+    "@types/react": "$@types/react"
+  },
+  "scripts": {
+    "build": "ray build -e dist",
+    "dev": "ray develop",
+    "fix-lint": "ray lint --fix",
+    "lint": "ray lint"
+  },
+  "platforms": [
+    "macOS"
+  ]
+}

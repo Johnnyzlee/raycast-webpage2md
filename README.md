@@ -8,7 +8,9 @@ AI agents often fail to read web pages because of anti-scraping measures (WeChat
 
 ## Requirements
 
-- [Raycast Browser Extension](https://raycast.com/browser-extension) installed in your browser
+- macOS with Raycast installed and signed in
+- Node.js 18 or later
+- [Raycast Browser Extension](https://raycast.com/browser-extension) installed in your browser (the command reads the page through it; without it the command fails)
 
 ## Usage
 

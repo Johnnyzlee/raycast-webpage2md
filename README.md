@@ -52,11 +52,9 @@ The extension is not published to the Raycast Store yet; install it locally:
 
 ## Development
 
-```bash
-npm install
-npm run build
-npm run dev
-```
+- `npm run dev` -- start the extension in development mode in Raycast (hot reload, error overlays, terminal logs). Press `Ctrl+C` to stop; the extension stays installed.
+- `npm run build` -- validate the extension for distribution; only needed when submitting to the Raycast Store.
+- `npm run lint` -- run lint checks.
 
 ## Customizing the name
 

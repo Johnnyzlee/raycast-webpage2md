@@ -26,6 +26,28 @@ Files are saved under `~/Raycast/Raycast WebClips/YYYY-MM-DD/<url-hash>/`:
 
 Content extraction prefers the article body (with a dedicated path for WeChat articles), falling back to Readability, then `<article>`, then the whole page.
 
+## Installation
+
+The extension is not published to the Raycast Store yet; install it locally:
+
+1. Clone the repository and install dependencies:
+
+   ```bash
+   git clone https://github.com/Johnnyzlee/raycast-webpage2md.git
+   cd raycast-webpage2md
+   npm install
+   ```
+
+2. Start it in development mode:
+
+   ```bash
+   npm run dev
+   ```
+
+   Raycast imports the extension and it appears at the top of root search. Press `Ctrl+C` in the terminal to stop the dev server; the extension stays installed.
+
+3. Make sure the [Raycast Browser Extension](https://raycast.com/browser-extension) is installed in your browser, then run **Capture webpage as .md for lzengan**.
+
 ## Development
 
 ```bash

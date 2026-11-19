@@ -21,7 +21,7 @@
   ],
   "dependencies": {
     "@mozilla/readability": "^0.6.0",
-    "@raycast/api": "^1.104.24",
+    "@raycast/api": "1.104.25",
     "linkedom": "^0.18.13",
     "turndown": "^7.2.4",
     "turndown-plugin-gfm": "^1.0.2"
@@ -36,13 +36,21 @@
     "typescript": "^5.9.2"
   },
   "overrides": {
-    "@types/react": "$@types/react"
+    "@types/react": "$@types/react",
+    "@raycast/api": {
+      "esbuild": "0.28.2"
+    },
+    "@oclif/core": {
+      "minimatch": "11.0.9"
+    }
   },
   "scripts": {
-    "build": "ray build -e dist",
+    "build": "ray build -e dist -o dist",
     "dev": "ray develop",
     "fix-lint": "ray lint --fix",
-    "lint": "ray lint"
+    "lint": "ray lint",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.test.cjs"
   },
   "platforms": [
     "macOS"

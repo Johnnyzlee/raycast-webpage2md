@@ -1,51 +1,57 @@
-# Webpage to Markdown for Raycast
+<div align="center">
 
-**把浏览器里正在阅读的网页，保存成带本地图片的 Markdown 文件，供自己整理或交给 AI 阅读。**
+<h1>Webpage to Markdown</h1>
+<p>Capture browser articles as Markdown with local images.</p>
+<p><strong>English</strong> · <a href="README.zh-CN.md">简体中文</a></p>
+<p><a href="#installation">Installation</a> · <a href="#usage">Usage</a> · <a href="#architecture">Architecture</a> · <a href="#data-handling">Data handling</a> · <a href="#development">Development</a></p>
+<sub>macOS · Raycast · Local processing · MIT License</sub>
 
-简体中文（主文档） · [English](README.en.md)
+</div>
 
-Raycast 命令：**Capture webpage as .md for lzengan**。这是按需运行的 macOS Raycast Extension，不是 AI Command，也不是常驻抓取服务。**不需要 API Key，不调用大模型，不会自动把网页上传给 AI。**
+---
 
-## 为什么做它
+Raycast command: **Capture webpage as .md for lzengan**. This is an on-demand macOS Raycast extension, not an AI Command or a background crawling service. **No API key or model call is needed. It does not automatically upload pages to an AI service.**
 
-我经常把网页交给 AI 阅读和讨论，但直接发链接不一定有效：网站可能限制自动抓取，微信公众号文章尤其常见。网页明明已经在浏览器里打开，另一端却仍然拿不到正文。
+## Why this project
 
-这个命令利用 Raycast Browser Extension 取得浏览器当前提供的 HTML，在本机提取正文、转换 Markdown、下载图片，再把生成的文件放到剪贴板。它省去了手动复制正文、逐张保存图片或把网页打印成 PDF 的步骤。
+A webpage that is readable in a browser may still be inaccessible to an AI tool or automated fetcher. Authentication, client-side rendering, and access restrictions make a URL alone an unreliable way to share reading material, particularly for WeChat articles.
 
-目标是获得一份**便于阅读、保存和继续处理的材料**。它不是 AI 摘要工具，也不保证得到网页的完整离线副本；无法替代登录、付费访问或尚未加载的内容。
+This command obtains the HTML exposed by Raycast Browser Extension, extracts the article locally, converts it to Markdown, downloads images, and places the resulting file on the clipboard. It avoids manually copying text, saving images individually, or printing the page to PDF first.
 
-## 下载之后能做什么
+The goal is a **readable, reusable local document**. It does not summarize with AI or promise a complete offline website archive. It cannot replace login, paid access, or content that has not loaded.
 
-| 需求 | 得到的结果 |
+## Features
+
+| Need | Result |
 | --- | --- |
-| 保存文章 | Markdown 正文，尽量保留标题、列表、链接、代码块和表格 |
-| 保存配图 | 可下载的图片写入同目录的 `assets/`，正文指向本地图片 |
-| 记录来源 | 标题、作者、发布时间、来源 URL、抓取时间和提取方式 |
-| 交给其他应用 | 剪贴板里是一份 `.md` **文件**，可粘贴到支持文件粘贴的应用 |
-| 回看提取结果 | 同时保存清理后的正文 `source.html`，便于排查正文提取情况 |
+| Save an article | Markdown preserving supported headings, lists, links, code blocks, and tables |
+| Keep illustrations | Downloadable images in `assets/`, referenced from the document |
+| Retain provenance | Title, author, publication information, source URL, capture time, and extraction method |
+| Hand it to another app | A `.md` **file** on the clipboard, for apps accepting file pastes |
+| Inspect extracted content | A cleaned article `source.html` alongside the Markdown |
 
-适合文章、博客、教程和微信公众号正文。你可以用 Markdown 编辑器阅读、纳入自己的资料库，或在检查内容后主动交给 AI。
+Best suited to articles, blogs, tutorials, and WeChat article bodies. Read the output in an editor, add it to a personal library, or deliberately share it with an AI after reviewing its contents.
 
-## 程序实际上在做什么
+## Architecture
 
 ```text
-已打开的浏览器网页
-  → Raycast Browser Extension 返回 HTML 与标签页信息
-  → 提取正文和来源信息
-  → 清理无关元素、规范链接、尝试保存图片
-  → 生成 Markdown 与正文 HTML
-  → 写入本地目录，把 Markdown 文件复制到剪贴板
+Open browser page
+  → Browser Extension returns HTML and tab information
+  → Extract article content and metadata
+  → Clean elements, normalize links, try to save images
+  → Generate Markdown and article HTML
+  → Write local files and copy the Markdown file to the clipboard
 ```
 
-1. **取得页面。** 调用 `BrowserExtension.getContent({ format: "html" })` 和 `getTabs()`。来源 URL 优先采用页面的 canonical/`og:url`，否则参考活动标签页；多个窗口或同名标签页时可能存在歧义。
-2. **选择正文。** 依次尝试微信公众号的 `#js_content` / `.rich_media_content`、Mozilla Readability、`<article>`，最后回退到 `<body>`。提取方法写入 Markdown，方便判断结果。
-3. **整理内容。** 删除脚本、表单、导航、音视频等元素，处理常见懒加载图片和部分背景图，把相对链接转换成完整地址，再移除多数无关属性。这是正文整理，不是完整的安全脱敏或网页重建。
-4. **本地化图片。** 相同来源只尝试一次；支持 HTTP(S) 和可解码的 `data:` 图片，最多 4 个并行任务。下载失败时保留原始来源，不会把缺图说成成功保存。
-5. **转换和保存。** 使用 Turndown 和 GFM 插件生成 Markdown，写入文件，再调用 `Clipboard.copy({ file: ... })`。最后显示本地化与未本地化的图片数量；不会自动把文件发送给别的应用。
+1. **Read the page.** Call `BrowserExtension.getContent({ format: "html" })` and `getTabs()`. Prefer the page's canonical/`og:url` metadata for the source URL, otherwise use an active tab. Multiple windows or matching titles can make this ambiguous.
+2. **Select the article.** Try WeChat's `#js_content` / `.rich_media_content`, Mozilla Readability, `<article>`, then `<body>`. Record the method in the Markdown.
+3. **Prepare content.** Remove scripts, forms, navigation, audio/video, and other elements; handle common lazy-image attributes and some background images; resolve relative links; strip most unrelated attributes. This is article cleanup, not complete security sanitization or website reconstruction.
+4. **Localize images.** Deduplicate sources, handle HTTP(S) and decodable `data:` images, and use up to four workers. Keep the original source when localization fails.
+5. **Convert and save.** Use Turndown with its GFM plugin, write files, and call `Clipboard.copy({ file: ... })`. Display image counts in a HUD. No automatic delivery to another application follows.
 
-## 安装
+## Installation
 
-需要 macOS、Raycast、已连接并授予页面访问权限的 [Raycast Browser Extension](https://www.raycast.com/browser-extension)，以及 **Node.js 22.22.2 或更新版本**。当前锁定的 Raycast API 版本为 1.104.24；建议使用满足要求的 Node.js LTS。
+Requirements: macOS, Raycast, a connected [Raycast Browser Extension](https://www.raycast.com/browser-extension) with page access, and **Node.js 22.22.2 or newer**. The project pins Raycast API 1.104.25. A compatible Node.js LTS version is recommended.
 
 ```sh
 git clone https://github.com/Johnnyzlee/raycast-webpage2md.git
@@ -55,88 +61,80 @@ npm ci
 npm run dev
 ```
 
-也可以在 GitHub 选择 **Code → Download ZIP**，解压后进入包含 `package.json` 的目录，执行同样的 npm 命令；ZIP 安装不需要 Git。
+Alternatively, choose **Code → Download ZIP** on GitHub, extract it, and run the npm commands in the directory containing `package.json`. Git is not required for the ZIP route.
 
-保持 Raycast 打开，等待开发构建成功，确认命令能在 Raycast 中搜索到，再按 **Control-C** 停止开发监听。日常使用不需要保持终端或开发进程运行。本项目从源码安装，不通过 Raycast Store 安装。
+Keep Raycast open until the development build succeeds and the command appears in search. Then press **Control-C** to stop the watcher. Normal use does not require a terminal or development process to remain running. This is a source installation, not a Raycast Store installation.
 
-## 使用与输出
+## Usage
 
-1. 在支持的浏览器中打开文章，等待内容加载完成。懒加载页面可先滚动到需要的内容。
-2. 唤出 Raycast，运行 **Capture webpage as .md for lzengan**。
-3. 等待成功提示；生成的 Markdown 文件已经复制到剪贴板。
-4. 在支持文件粘贴的应用中粘贴，或从下面的目录打开文件。若要纯文字，先用编辑器打开 Markdown，再复制正文。
+1. Open the article in a supported browser and let it load. Scroll through relevant lazy-loaded content first if necessary.
+2. Run **Capture webpage as .md for lzengan** in Raycast.
+3. Wait for the success HUD; the Markdown file is now on the clipboard.
+4. Paste it into an application accepting files, or open it from the output directory. For plain text, open the Markdown in an editor and copy its contents.
 
-默认目录来自当前用户的 home，不依赖作者的电脑：
+The default path uses the current user's home directory, not the author's machine:
 
 ```text
 ~/Raycast/Raycast WebClips/
-└── 2026-11-19/                 # 抓取日期，按 UTC 分组
-    └── a1b2c3d4e5/            # 来源 URL 的 SHA-256 前 10 位
-        ├── 文章标题.md
-        ├── source.html         # 清理后的正文，不是完整原始网页
+└── 2026-11-19/                 # UTC capture date
+    └── a1b2c3d4e5/            # First 10 characters of the source URL's SHA-256
+        ├── Article title.md
+        ├── source.html         # Cleaned article, not the entire original page
         └── assets/
             ├── 001.png
             └── 002.jpg
 ```
 
-同日重复抓取已有 URL 时，会尝试追加本地时间后缀。`source.html` 与 Markdown 使用整理后的正文和图片引用，不包含网页的完整交互行为。
+When a directory for the URL already exists that day, the command tries a local-time suffix. Both Markdown and `source.html` contain processed article content and image references, not the page's complete interactive behavior.
 
-Markdown 开头的 YAML 保存 `title`、`source`、`author`、`published`、`captured`、`extraction`、`local_images` 和 `remote_images`。作者和发布时间来自页面，可能缺失或不准确，不代表已经外部核实。
+YAML front matter records `title`, `source`, `author`, `published`, `captured`, `extraction`, `local_images`, and `remote_images`. Author and publication information come from the page; they may be absent or inaccurate and are not independently verified.
 
-**当前公开版的本地图片引用是绝对路径。** 在这台 Mac 上读取通常方便，但把 `.md` 单独发给别人、移动目录或上传到云端 AI 后，图片不一定可访问。需要分享带图材料时，应一起提供 `assets/`，并把 Markdown 中的图片路径改成相对路径或接收端可访问的路径；本命令不会自动打包附件或嵌入全部图片。
+**The current public version uses absolute local paths for saved images.** This is convenient on the same Mac, but moving the folder, sharing only the `.md`, or uploading it to a cloud AI does not guarantee that images remain accessible. Share `assets/` too and rewrite image references to relative or recipient-accessible paths when needed. The command does not package attachments or embed every image automatically.
 
-## 数据会去哪里
+## Data handling
 
-| 操作 | 数据去向 |
+| Operation | Destination |
 | --- | --- |
-| 取得正文 | 通过 Raycast 浏览器扩展读取当前 HTML，并取得标签页元信息 |
-| 提取、清理、转换 | 在本机扩展进程内完成，不发送给大模型或作者服务器 |
-| 下载图片 | 请求图片原站/CDN，附带 User-Agent 和页面来源 `Referer`；代码不读取或复制浏览器 Cookie |
-| 保存结果 | 写入本机 WebClips 目录；剪贴板保存 Markdown 文件引用 |
-| 交给 AI 或同步网盘 | 由你之后的分享操作或其他应用决定，不由本扩展自动完成 |
+| Obtain content | Current HTML and tab metadata through Raycast Browser Extension |
+| Extract and convert | Local extension process; no model or author-operated server |
+| Download images | Original image hosts/CDNs, with a User-Agent and page `Referer`; the code does not read or copy browser cookies |
+| Save results | Local WebClips directory; a Markdown file reference on the clipboard |
+| Send to AI or sync storage | Your later sharing actions or another app, not this extension automatically |
 
-页面中的私人内容、来源 URL 查询参数、正文和图片可能进入输出文件；清理 HTML 不等于删除敏感信息。图片站点会看到正常的网络请求信息及 `Referer`。分享前应检查输出，尤其是登录后才能看到的页面。
+Private page content, source-URL query parameters, text, and images may enter output files. HTML cleanup is not sensitive-data removal. Image hosts receive ordinary network request information and the `Referer`. Review output before sharing, especially for authenticated pages.
 
-退出命令不会删除剪藏。无需保留时可以删除对应文章文件夹；删除后，旧剪贴板文件引用和图片路径也可能失效。
+Clips remain after the command exits. Delete an article folder when no longer needed; doing so can invalidate clipboard references and image paths.
 
-## 范围与限制
+## Scope and limitations
 
-- 以浏览器扩展实际提供的 HTML 为准；不会自动滚动、翻页、展开折叠内容或解决验证码。浏览器内置 PDF 阅读器、画布、视频和复杂交互页面不是主要目标。
-- 不需要 AI 订阅或 DeepSeek Key 来做转换，但仍需能使用 Raycast 及其浏览器扩展。
-- 多窗口的页面和元信息匹配不保证始终正确；运行后可检查 Markdown 的标题和来源 URL。
-- 图片单文件检查上限为 25 MiB；HTTP 请求超时为 20 秒。登录态、防盗链、临时 URL 或不支持的格式都可能导致图片未本地化。
-- 150 MiB 是累计**纳入本地引用的图片预算**。当前代码在下载落盘后检查累计预算，因此它不是严格的网络流量或磁盘上限，`assets/` 中可能留下未被正文引用的文件。
-- 已有目录发生秒级命名冲突、路径/权限异常或正文过短时，命令可能失败；失败后也可能留下部分文件，可到输出目录检查。
-- 正文提取、表格、数学公式和元信息都可能损失细节，重要材料需要对照网页。本项目没有覆盖所有网站的自动化测试套件。
+- Limited to HTML actually supplied by the browser extension. No automatic scrolling, pagination, expanding hidden content, or CAPTCHA solving. Browser PDF viewers, canvas content, video, and complex interactive pages are not the primary target.
+- Conversion needs no AI subscription or DeepSeek key, but Raycast and its browser integration must be available.
+- Multi-window content/metadata matching is not guaranteed. Check the resulting title and source URL.
+- Per-image checks allow up to 25 MiB; HTTP requests time out after 20 seconds. Authentication, hotlink protection, temporary URLs, or unsupported formats can prevent localization.
+- The 150 MiB cumulative budget applies to images **accepted into local references**. It is checked after downloading and writing, so it is not a strict network/disk cap; unreferenced files may remain in `assets/`.
+- Second-level naming collisions, path/permission problems, or very short extracted content can cause failure. Partial output directories may remain.
+- Extraction, tables, formulas, and metadata can lose details. Compare important material with the page. Automated tests cover representative extraction and failure paths, not every website.
 
-## 修改和维护
+## Development
 
 ```sh
-git pull --ff-only             # 仅适用于 Git 克隆
+git pull --ff-only             # Git clones only
 npm ci
-npm exec tsc -- --noEmit
-npm run build                 # 当前脚本导出至 dist/，用于构建检查
-npm run dev                   # 将更新同步到本机 Raycast
+npm run typecheck
+npm test
+npm audit
+npm run build                 # Current script exports to dist/ for build checks
+npm run dev                   # Sync the update into Raycast
 ```
 
-构建成功后可停止开发监听。修改显示名称只需调整 `package.json` 的 `commands[0].title`；若改 `commands[0].name`，还必须同步修改源码入口文件名。自动生成的 `raycast-env.d.ts` 应由 Raycast 工具重新生成。
+Stop the watcher after a successful development build. To change the display name, edit `commands[0].title` in `package.json`. Changing `commands[0].name` also requires renaming the source entry file. Regenerate `raycast-env.d.ts` with Raycast tooling rather than editing generated types manually.
 
-主要实现集中在 [src/capture-webpage-as-md-for-lzengan.ts](src/capture-webpage-as-md-for-lzengan.ts)：`pageMetadata` 提取元信息，`selectContent` 选择正文，`prepareContent` 清理内容，`localizeImages` 下载配图，`toMarkdown` 转换正文，`capture` 组织整个流程。`OUTPUT_ROOT` 控制保存目录。
+Implementation is in [src/capture-webpage-as-md-for-lzengan.ts](src/capture-webpage-as-md-for-lzengan.ts): `pageMetadata` collects metadata, `selectContent` chooses the body, `prepareContent` cleans it, `localizeImages` saves images, `toMarkdown` converts it, and `capture` coordinates the workflow. `OUTPUT_ROOT` controls storage.
 
-这些命令检查依赖、类型和构建，不等于已经在每一种浏览器和网站上完成实际使用验证。
+The regression suite runs the actual capture command and parsing libraries against synthetic pages, with a temporary home directory and mocked Raycast/network interfaces. It covers WeChat and Readability extraction, article/body fallbacks, metadata, Markdown structure, local images, download failures, repeated captures, and error reporting. It does not access your browser or clipboard. Real browser permissions and site-specific rendering still require a manual check.
 
-## 同一套 Raycast 阅读工具
+The lockfile contains the security updates. Scoped overrides keep `esbuild` at `0.28.2` under the Raycast SDK and `minimatch` at `11.0.9` under `@oclif/core`, while retaining Raycast SDK 1.x. See [dependency maintenance](docs/dependencies.md) for the rationale and verification record. Use `npm ci` to reproduce the reviewed dependency tree.
 
-三个项目可以独立使用，根据材料和任务选择：
+## License
 
-| 项目 | 适合做什么 |
-| --- | --- |
-| **本项目** | 把已经打开的网页整理为本地 Markdown 和图片，不调用 AI |
-| [DeepSeek PDF Summary](https://github.com/Johnnyzlee/raycast-deepseek-pdf-summary) | 从 PDF 图文生成中文摘要，再交接到 AI Chat |
-| [DeepSeek Raycast Adapter](https://github.com/Johnnyzlee/raycast-deepseek-adapter) | 在同一个 AI Chat 中衔接本地工具、原生联网与文件图文问答 |
-
-[个人 Raycast 工作流](https://johnnyzlee.github.io/blogs/arsenal/raycast-workflow.html)记录这套工具的使用背景和配置。
-
-## 许可
-
-[MIT License](LICENSE)。个人项目，与 Raycast 或网站内容提供方无隶属关系。保存和分享网页内容时，仍应遵守原内容的访问权限和版权要求。
+[MIT License](LICENSE). A personal project, not affiliated with Raycast or the content providers. Access permissions and copyright of captured material still apply.

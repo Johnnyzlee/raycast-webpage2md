@@ -1,21 +1,23 @@
 {
   "$schema": "https://www.raycast.com/schemas/extension.json",
-  "name": "wechat-article-capture",
-  "title": "Capture webpage as .md for lzengan",
-  "description": "Capture the active webpage as Markdown with local images and copy the file to the clipboard.",
+  "name": "webpage-capture-for-lzengan",
+  "title": "Webpage Capture for Lzengan",
+  "description": "Capture the current browser page as Markdown with local images",
   "icon": "icon.png",
   "author": "li_zeng",
   "license": "MIT",
+  "platforms": [
+    "macOS"
+  ],
   "categories": [
-    "Productivity",
-    "Web"
+    "Productivity"
   ],
   "commands": [
     {
       "name": "capture-webpage-as-md-for-lzengan",
       "title": "Capture webpage as .md for lzengan",
       "subtitle": "Markdown with Local Images",
-      "description": "Save the active webpage as Markdown and copy the file to the clipboard",
+      "description": "Capture the active browser page as a local Markdown file with downloaded images",
       "mode": "no-view"
     }
   ],
@@ -35,6 +37,15 @@
     "prettier": "^3.6.2",
     "typescript": "^5.9.2"
   },
+  "scripts": {
+    "build": "ray build -e dist -o dist",
+    "dev": "ray develop",
+    "fix-lint": "ray lint --fix",
+    "lint": "ray lint",
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.test.cjs",
+    "test:bundle": "node tests/bundle-smoke.cjs"
+  },
   "overrides": {
     "@types/react": "$@types/react",
     "@raycast/api": {
@@ -43,16 +54,5 @@
     "@oclif/core": {
       "minimatch": "11.0.9"
     }
-  },
-  "scripts": {
-    "build": "ray build -e dist -o dist",
-    "dev": "ray develop",
-    "fix-lint": "ray lint --fix",
-    "lint": "ray lint",
-    "typecheck": "tsc --noEmit",
-    "test": "node --test tests/*.test.cjs"
-  },
-  "platforms": [
-    "macOS"
-  ]
+  }
 }

@@ -15,9 +15,9 @@ The existing SDK's declared ranges do not include the fixed esbuild and minimatc
 
 The esbuild advisory concerns its development server on Windows; this extension targets macOS and does not use that server. The dependency is nevertheless updated so the reviewed tree has no known npm audit findings. The glob/YAML advisories concern resource exhaustion in parsing. A clean audit is a point-in-time registry result, not a guarantee that all dependencies are free of defects.
 
-## Compatibility
+## Compatibility of the dependency-only update
 
-The capture source is unchanged. Readability, LinkeDOM, Turndown, and the GFM plugin retain their original versions. Output paths, image references, clipboard behavior, and the Raycast command identifier are unchanged.
+At the dependency-only update (`ccbcea7`), the capture source was unchanged. Readability, LinkeDOM, Turndown, and the GFM plugin retain their original versions. Output paths, image references, clipboard behavior, and the Raycast command identifier are unchanged.
 
 The regression suite passed against both the original and updated dependency trees. It executes the actual command and parsing libraries, replacing only the Raycast host, network, clock, and home directory. It covers:
 
@@ -33,6 +33,7 @@ npm ci
 npm run typecheck
 npm test
 npm run build
+npm run test:bundle
 npm audit
 npm ls --all
 ```
@@ -44,3 +45,9 @@ The updated esbuild context/watch/rebuild API and Raycast CLI argument handling 
 ## Future updates
 
 Keep `package-lock.json` committed and install with `npm ci`. Re-run the checks after changing dependencies. Remove each override when the supported SDK declares a suitable fixed version, after verifying the resulting tree. Do not run `npm audit fix --force` without reviewing SDK/API changes.
+
+## Unified implementation
+
+The subsequent merge uses the local implementation as the functional baseline and retains the reviewed dependency tree. Its extension identifier is `webpage-capture-for-lzengan`; the command entry point remains `capture-webpage-as-md-for-lzengan`. Runtime changes and migration details are documented in the README.
+
+The expanded suite covers relative paths, tab-pinned HTML, JSON-LD metadata, inline image localization, one-time background conversion, atomic directory creation, Readability exception fallback, and shared streaming size limits. Both HTTP and inline image data are subject to the same budget. The raw browser HTML is retained as `source.html`.

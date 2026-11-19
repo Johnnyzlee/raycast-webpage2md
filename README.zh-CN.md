@@ -28,7 +28,7 @@ Raycast 命令：**Capture webpage as .md for lzengan**。这是按需运行的 
 | 保存配图 | 可下载的图片写入同目录的 `assets/`，正文指向本地图片 |
 | 记录来源 | 标题、作者、发布时间、来源 URL、抓取时间和提取方式 |
 | 交给其他应用 | 剪贴板里是一份 `.md` **文件**，可粘贴到支持文件粘贴的应用 |
-| 回看提取结果 | 同时保存清理后的正文 `source.html`，便于排查正文提取情况 |
+| 保留页面来源 | 同时保存浏览器返回的原始 `source.html`，便于与整理后的 Markdown 对照 |
 
 适合文章、博客、教程和微信公众号正文。你可以用 Markdown 编辑器阅读、纳入自己的资料库，或在检查内容后主动交给 AI。
 
@@ -39,15 +39,15 @@ Raycast 命令：**Capture webpage as .md for lzengan**。这是按需运行的 
   → Raycast Browser Extension 返回 HTML 与标签页信息
   → 提取正文和来源信息
   → 清理无关元素、规范链接、尝试保存图片
-  → 生成 Markdown 与正文 HTML
+  → 生成 Markdown，保留浏览器原始 HTML
   → 写入本地目录，把 Markdown 文件复制到剪贴板
 ```
 
-1. **取得页面。** 调用 `BrowserExtension.getContent({ format: "html" })` 和 `getTabs()`。来源 URL 优先采用页面的 canonical/`og:url`，否则参考活动标签页；多个窗口或同名标签页时可能存在歧义。
-2. **选择正文。** 依次尝试微信公众号的 `#js_content` / `.rich_media_content`、Mozilla Readability、`<article>`，最后回退到 `<body>`。提取方法写入 Markdown，方便判断结果。
-3. **整理内容。** 删除脚本、表单、导航、音视频等元素，处理常见懒加载图片和部分背景图，把相对链接转换成完整地址，再移除多数无关属性。这是正文整理，不是完整的安全脱敏或网页重建。
-4. **本地化图片。** 相同来源只尝试一次；支持 HTTP(S) 和可解码的 `data:` 图片，最多 4 个并行任务。下载失败时保留原始来源，不会把缺图说成成功保存。
-5. **转换和保存。** 使用 Turndown 和 GFM 插件生成 Markdown，写入文件，再调用 `Clipboard.copy({ file: ... })`。最后显示本地化与未本地化的图片数量；不会自动把文件发送给别的应用。
+1. **取得页面。** 从 `getTabs()` 返回结果中选择第一个活动标签页，校验 HTTP(S) 地址，再用 `getContent({ format: "html", tabId })` 读取对应 HTML。正文与来源地址来自同一个标签页，地址中的片段标记会移除。多窗口时，第一个活动标签页不一定是最前面的窗口。
+2. **选择正文。** 依次尝试微信公众号的 `#js_content` / `.rich_media_content`、Mozilla Readability、`<article>` 和 `<body>`。Readability 抛出异常时仍可继续回退。作者与日期可以从页面元素、meta 标签、`datetime` 或 JSON-LD 提取。
+3. **整理内容。** 规范链接，处理懒加载图片和 `srcset` 回退，将支持的背景图转换一次。提取内容会移除脚本、表单、媒体、隐藏元素、事件属性与 JavaScript 链接；body 回退还会清理常见导航与广告。这些处理用于生成 Markdown，不改变保留的原始 HTML。
+4. **本地化图片。** 对来源去重，最多并行处理 4 张图片。HTTP(S) 图片和支持的内嵌 `data:image` 图片保存到 `assets/`，正文使用相对路径。失败时保留来源引用；所有任务共享大小预算，在读取数据块或解码内嵌图片时检查。
+5. **转换和保存。** 用 Turndown 与 GFM 插件生成 Markdown，通过原子创建操作分配新目录，保存 Markdown 和原始 `source.html`，再调用 `Clipboard.copy({ file: ... })`。重复或并发抓取分别保存，不覆盖已有文件；不会自动发送到其他应用。
 
 ## 安装
 
@@ -76,20 +76,20 @@ npm run dev
 
 ```text
 ~/Raycast/Raycast WebClips/
-└── 2026-11-19/                 # 抓取日期，按 UTC 分组
-    └── a1b2c3d4e5/            # 来源 URL 的 SHA-256 前 10 位
+└── 2026-11-19/                 # 抓取日期，按本地日期分组
+    └── a1b2c3d4e5f67890/      # 来源 URL 的 SHA-256 前 16 位
         ├── 文章标题.md
-        ├── source.html         # 清理后的正文，不是完整原始网页
+        ├── source.html         # 浏览器返回的原始 HTML
         └── assets/
             ├── 001.png
             └── 002.jpg
 ```
 
-同日重复抓取已有 URL 时，会尝试追加本地时间后缀。`source.html` 与 Markdown 使用整理后的正文和图片引用，不包含网页的完整交互行为。
+同日重复抓取同一 URL 时，使用时间后缀，必要时再追加序号，避免复用或覆盖已有目录。`source.html` 保留浏览器返回的原始 HTML，其中的链接、脚本和远程资源不作改写；它是页面来源快照，不是完整的离线网站副本。
 
 Markdown 开头的 YAML 保存 `title`、`source`、`author`、`published`、`captured`、`extraction`、`local_images` 和 `remote_images`。作者和发布时间来自页面，可能缺失或不准确，不代表已经外部核实。
 
-**本地图片引用使用绝对路径。** 在这台 Mac 上读取通常方便，但把 `.md` 单独发给别人、移动目录或上传到云端 AI 后，图片不一定可访问。需要分享带图材料时，应一起提供 `assets/`，并把 Markdown 中的图片路径改成相对路径或接收端可访问的路径；本命令不会自动打包附件或嵌入全部图片。
+**保存的图片使用 `assets/001.png` 这样的相对路径。** 移动或分享完整文章文件夹即可保留引用关系。只粘贴 `.md` 文件不会同时包含图片，云端 AI 也不一定能自动读取配套文件；本命令不会自动打包或上传附件。
 
 ## 数据处理
 
@@ -101,7 +101,7 @@ Markdown 开头的 YAML 保存 `title`、`source`、`author`、`published`、`ca
 | 保存结果 | 写入本机 WebClips 目录；剪贴板保存 Markdown 文件引用 |
 | 交给 AI 或同步网盘 | 由你之后的分享操作或其他应用决定，不由本扩展自动完成 |
 
-页面中的私人内容、来源 URL 查询参数、正文和图片可能进入输出文件；清理 HTML 不等于删除敏感信息。图片站点会看到正常的网络请求信息及 `Referer`。分享前应检查输出，尤其是登录后才能看到的页面。
+页面中的私人内容、来源 URL 查询参数、正文和图片可能进入输出文件。原始 `source.html` 还会保留页面脚本和隐藏内容，并未做安全清理；整理 Markdown 也不等于删除敏感信息。图片站点会看到正常的网络请求信息及 `Referer`。分享前应检查输出，尤其是登录后才能看到的页面。
 
 退出命令不会删除剪藏。无需保留时可以删除对应文章文件夹；删除后，旧剪贴板文件引用和图片路径也可能失效。
 
@@ -109,10 +109,10 @@ Markdown 开头的 YAML 保存 `title`、`source`、`author`、`published`、`ca
 
 - 以浏览器扩展实际提供的 HTML 为准；不会自动滚动、翻页、展开折叠内容或解决验证码。浏览器内置 PDF 阅读器、画布、视频和复杂交互页面不是主要目标。
 - 不需要 AI 订阅或 DeepSeek Key 来做转换，但仍需能使用 Raycast 及其浏览器扩展。
-- 多窗口的页面和元信息匹配不保证始终正确；运行后可检查 Markdown 的标题和来源 URL。
-- 图片单文件检查上限为 25 MiB；HTTP 请求超时为 20 秒。登录态、防盗链、临时 URL 或不支持的格式都可能导致图片未本地化。
-- 150 MiB 是累计**纳入本地引用的图片预算**。当前代码在下载落盘后检查累计预算，因此它不是严格的网络流量或磁盘上限，`assets/` 中可能留下未被正文引用的文件。
-- 已有目录发生秒级命名冲突、路径/权限异常或正文过短时，命令可能失败；失败后也可能留下部分文件，可到输出目录检查。
+- 多窗口时需确认选择的是目标活动标签页。HTML 会锁定该标签页，但标签页排列顺序不保证对应最前面的窗口。
+- 图片单文件检查上限为 25 MiB；HTTP 请求超时为 30 秒。登录态、防盗链、临时 URL 或不支持的格式都可能导致图片未本地化。
+- 150 MiB 共享预算统计已接收的 HTTP 数据块和已解码的内嵌图片，包括随后失败的下载所消耗的数据。超限图片不会写入文件；取消前网络或运行时可能已有额外缓冲，因此不等于严格的网络流量上限。
+- 支持有内容的短笔记，提取结果为空时会报错。路径、权限异常或写入中断仍可能留下部分输出文件。
 - 正文提取、表格、数学公式和元信息都可能损失细节，重要材料需要对照网页。自动测试覆盖典型提取流程和失败场景，不能覆盖所有网站。
 
 ## 开发与维护
@@ -124,14 +124,21 @@ npm run typecheck
 npm test
 npm audit
 npm run build                 # 当前脚本导出至 dist/，用于构建检查
+npm run test:bundle
 npm run dev                   # 将更新同步到本机 Raycast
 ```
 
 构建成功后可停止开发监听。修改显示名称只需调整 `package.json` 的 `commands[0].title`；若改 `commands[0].name`，还必须同步修改源码入口文件名。自动生成的 `raycast-env.d.ts` 应由 Raycast 工具重新生成。
 
-主要实现集中在 [src/capture-webpage-as-md-for-lzengan.ts](src/capture-webpage-as-md-for-lzengan.ts)：`pageMetadata` 提取元信息，`selectContent` 选择正文，`prepareContent` 清理内容，`localizeImages` 下载配图，`toMarkdown` 转换正文，`capture` 组织整个流程。`OUTPUT_ROOT` 控制保存目录。
+主要实现集中在 [src/capture-webpage-as-md-for-lzengan.ts](src/capture-webpage-as-md-for-lzengan.ts)：`extractMetadata` 提取元信息，`extractPage` 选择正文，`normalizeDocumentUrls` 整理链接和图片，`localizeImages` 保存配图，`buildMarkdown` 转换正文，`capture` 组织流程。`OUTPUT_ROOT` 控制保存目录。
 
-回归测试使用合成网页、临时用户目录和模拟 Raycast／网络接口，执行真实命令与解析库，覆盖微信公众号与 Readability 提取、article／body 回退、元信息、Markdown 结构、图片保存、下载失败、重复抓取和错误提示。测试不会访问真实浏览器或剪贴板；浏览器权限和具体网站的渲染效果仍需实际确认。
+回归测试使用合成网页、临时用户目录和模拟 Raycast／网络接口，执行真实命令与解析库，覆盖正文提取与异常回退、元信息、相对图片路径、内嵌图片、背景图单次转换、流式限额、同秒／并发抓取、文件名限制和剪贴板行为。测试不会访问真实浏览器或剪贴板；浏览器权限和具体网站效果仍需实际确认。
+
+### 从旧版安装升级
+
+扩展标识现统一为 `webpage-capture-for-lzengan`，与维护中的本地实现一致；命令入口和显示名称保持不变。如果安装过旧公开版 `wechat-article-capture`，运行 `npm run dev` 会安装新的扩展标识。确认新命令可用后，如 Raycast 中出现重复条目，可在 Settings 中移除旧条目。已有 WebClips 不会迁移或删除；新版本按本地日期和 16 位 URL 哈希创建目录。
+
+以 Git 仓库目录作为唯一源码来源，在该目录修改和构建。`~/.config/raycast/extensions/` 中的文件属于生成的安装产物。
 
 依赖修复记录在锁文件中。项目保留 Raycast SDK 1.x，通过限定范围的 overrides，将 SDK 下的 `esbuild` 固定为 `0.28.2`，将 `@oclif/core` 下的 `minimatch` 固定为 `11.0.9`。修复依据与验证记录见 [依赖维护说明](docs/dependencies.md)。使用 `npm ci` 复现已检查的依赖树。
 
